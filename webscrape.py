@@ -1,8 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
 
-
-response = requests.get("https://www.sec.gov/cgi-bin/srch-edgar?text=DEF+14A+electric&first=2019&last=2019")
+com_name = input("Enter company name for DEF 14A search:")
+response = requests.get("https://www.sec.gov/cgi-bin/srch-edgar?text=DEF+14A+{}&first=2019&last=2019".format(com_name))
    
 if response.status_code == 200:
     print("Success!")
