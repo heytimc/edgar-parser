@@ -1,4 +1,5 @@
 import requests
+import re
 from bs4 import BeautifulSoup
 
 com_name = input("Enter company name for DEF 14A search:")
@@ -17,6 +18,27 @@ bs = BeautifulSoup(text, 'html.parser')
 bs.prettify()
 
 blacklist = ["[text]", "[html]"]
-
+# r'\d{1,5}\s\w.\s(\b\w*\b\s){1,2}\w*\.
+# ^(\d+)\s+([^\r\n]+)(?:[\r\n]*)'
+pattern = re.compile(r'meeting')
 for link in bs.select("a[href*=Archives]"):
-    if link.contents[0] not in blacklist: print(link.contents[0])
+    if link.contents[0] not in blacklist:
+        print(link.contents[0])
+        print("************")
+    if link.contents[0] == "[text]": 
+        doclink = link.get('href')
+        textdoc = requests.get("https://www.sec.gov{}".format(doclink))
+        another_soup = BeautifulSoup(textdoc.content.decode("utf-8"), 'html.parser')
+        for element in another_soup(text=re.compile(r'held on')):
+            print(element)
+    
+    print()
+            
+        
+
+
+
+
+
+    
+    # if link.contents[0] not in blacklist: print(link.contents[0])
