@@ -1,2 +1,2 @@
 # edgar-parser
-Parser for EDGAR message
+Parser for an EDGAR message
