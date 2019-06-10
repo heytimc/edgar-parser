@@ -64,9 +64,22 @@ class Edgarparser(object):
 
   ########################################################################################
   # parse a def14a html message
-  def def14a(self, message):
-    self._log(LOG_DEBUG, "Parsing def14a started")
-    soup = BeautifulSoup(message,'html5lib')
-    text = soup.get_text(strip = True)
-    tokens = [t for t in text.split()]
-    return tokens[:5]
+  def def14a(self, html):
+    try:
+      self._log(LOG_DEBUG, "Parsing def14a started")
+      soup = BeautifulSoup(html, 'html5lib')
+      text = soup.get_text()
+      tokens = [t for t in text.split()]
+      self._log(LOG_DEBUG, "Parsing def14a finished")
+    except SyntaxError as e:
+      exc_type, exc_value, exc_traceback = sys.exc_info()
+      log(LOG_CRITICAL, "Abort during processing {0} at line {1}".format(str(exc_value), str(exc_traceback.tb_lineno)))
+    except Exception as e:
+      exc_type, exc_value, exc_traceback = sys.exc_info()
+      log(LOG_CRITICAL, "Abort during processing")
+      log(LOG_CRITICAL, sys.exc_info())
+      imported_tb_info = traceback.extract_tb(exc_traceback)[-1]
+      line_number = imported_tb_info[1]
+      log(LOG_CRITICAL, "at line number " + str(line_number))
+      sys.exit(1)
+    return text
