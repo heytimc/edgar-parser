@@ -109,8 +109,8 @@ class MinervaFrame ( wx.Frame ):
         
         sizer_log = wx.StaticBoxSizer( wx.StaticBox( self.m_panel20, wx.ID_ANY, u"log" ), wx.VERTICAL )
         
-        self.m_richText2 = wx.richtext.RichTextCtrl( sizer_log.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0|wx.VSCROLL|wx.HSCROLL|wx.NO_BORDER|wx.WANTS_CHARS )
-        sizer_log.Add( self.m_richText2, 1, wx.EXPAND |wx.ALL, 5 )
+        self.info_log = wx.richtext.RichTextCtrl( sizer_log.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0|wx.VSCROLL|wx.HSCROLL|wx.NO_BORDER|wx.WANTS_CHARS )
+        sizer_log.Add( self.info_log, 1, wx.EXPAND |wx.ALL, 5 )
         
         
         self.m_panel20.SetSizer( sizer_log )
@@ -134,7 +134,8 @@ class MinervaFrame ( wx.Frame ):
         pass
     
     def onSearchButton(self, event):
-        self.meeting_controller.updateView()
+        text_to_log = self.meeting_controller.updateView()
+        self.info_log.AppendText(text_to_log)
 
 if __name__ == "__main__":
     app = wx.App()

@@ -7,4 +7,4 @@ class MeetingController():
         self.meeting = Meeting()
     
     def updateView(self):
-        print("YEEET")
+        return self.meeting.getAddress()

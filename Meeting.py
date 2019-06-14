@@ -7,7 +7,7 @@ class Meeting(object):
         self._resolution_data = None
     
     def getAddress(self):
-        pass
+        return "Example Address\n"
     
     def getDate(self):
         pass
