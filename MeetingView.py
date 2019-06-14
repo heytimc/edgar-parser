@@ -79,7 +79,7 @@ class MinervaFrame ( wx.Frame ):
         bSizer39 = wx.BoxSizer( wx.HORIZONTAL )
         
         self.search_button = wx.Button( self.m_panel32, wx.ID_ANY, u"Search", wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.search_button.Bind(wx.EVT_BUTTON, self.onSearchButton)
+        self.search_button.Bind(wx.EVT_BUTTON, self.displayLogData)
         bSizer39.Add( self.search_button, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 25 )
         
         self.cancel_button = wx.Button( self.m_panel32, wx.ID_ANY, u"Cancel", wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -133,7 +133,7 @@ class MinervaFrame ( wx.Frame ):
     def __del__( self ):
         pass
     
-    def onSearchButton(self, event):
+    def displayLogData(self, event):
         text_to_log = self.meeting_controller.updateView()
         self.info_log.AppendText(text_to_log)
 
