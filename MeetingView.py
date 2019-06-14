@@ -10,6 +10,7 @@
 import wx
 import wx.xrc
 import wx.richtext
+from MeetingController import MeetingController
 
 ###########################################################################
 ## Class MinervaFrame
@@ -18,6 +19,7 @@ import wx.richtext
 class MinervaFrame ( wx.Frame ):
     
     def __init__( self, parent ):
+        self.meeting_controller = MeetingController()
         wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"SEC EDGAR Web Scraper", pos = wx.DefaultPosition, size = wx.Size( 1352,598 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
         
         self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
@@ -77,6 +79,7 @@ class MinervaFrame ( wx.Frame ):
         bSizer39 = wx.BoxSizer( wx.HORIZONTAL )
         
         self.search_button = wx.Button( self.m_panel32, wx.ID_ANY, u"Search", wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.search_button.Bind(wx.EVT_BUTTON, self.onSearchButton)
         bSizer39.Add( self.search_button, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 25 )
         
         self.cancel_button = wx.Button( self.m_panel32, wx.ID_ANY, u"Cancel", wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -129,6 +132,9 @@ class MinervaFrame ( wx.Frame ):
     
     def __del__( self ):
         pass
+    
+    def onSearchButton(self, event):
+        self.meeting_controller.updateView()
 
 if __name__ == "__main__":
     app = wx.App()
