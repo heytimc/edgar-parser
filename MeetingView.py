@@ -54,10 +54,10 @@ class MinervaFrame ( wx.Frame ):
         self.companyName.Wrap( -1 )
         search_sizer.Add( self.companyName, 0, wx.ALIGN_LEFT|wx.ALL, 5 )
         
-        self.m_textCtrl6 = wx.TextCtrl( search_sizer.GetStaticBox(), wx.ID_ANY, u"Company Name...", wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.m_textCtrl6.SetFont( wx.Font( wx.NORMAL_FONT.GetPointSize(), 70, 90, 90, False, wx.EmptyString ) )
+        self.company_search = wx.TextCtrl( search_sizer.GetStaticBox(), wx.ID_ANY, u"Company Name...", wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.company_search.SetFont( wx.Font( wx.NORMAL_FONT.GetPointSize(), 70, 90, 90, False, wx.EmptyString ) )
         
-        search_sizer.Add( self.m_textCtrl6, 0, wx.ALIGN_LEFT|wx.ALL, 5 )
+        search_sizer.Add( self.company_search, 0, wx.ALIGN_LEFT|wx.ALL, 5 )
         
         self.documentCreation = wx.StaticText( search_sizer.GetStaticBox(), wx.ID_ANY, u"Document year created between:", wx.DefaultPosition, wx.DefaultSize, 0 )
         self.documentCreation.Wrap( -1 )
@@ -134,8 +134,10 @@ class MinervaFrame ( wx.Frame ):
         pass
     
     def displayLogData(self, event):
-        text_to_log = self.meeting_controller.updateView()
-        self.info_log.AppendText(text_to_log)
+        """text_to_log = self.meeting_controller.updateView()
+        self.info_log.AppendText(text_to_log)"""
+        self.meeting_controller.getMeetingData(self.company_search.GetValue(), 2015, 2019)
+        
 
 if __name__ == "__main__":
     app = wx.App()
