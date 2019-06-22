@@ -28,7 +28,7 @@
 import sys
 if sys.version_info[0] < 3:
   raise Exception("Please run using Python 3")
-import datetime, logging
+import datetime, logging, re
 from time import gmtime, strftime
 from bs4 import BeautifulSoup
 
@@ -67,13 +67,11 @@ class Edgarparser(object):
   def def14a(self, html):
     try:
       self._log(LOG_DEBUG, "Parsing def14a started")
-      soup = BeautifulSoup(html, 'html5lib')
-      text = soup.get_text()
-      tokens = [t for t in text.split()]
+      soup = BeautifulSoup(html, 'html5lib') # very lenient, slow parsing
+      # find the start of the meeting notice
+      text = soup.find_all(string=re.compile("(?i)notice.*meeting"))
+      print(text.find(string=re.compile("[0-9]*")))
       self._log(LOG_DEBUG, "Parsing def14a finished")
-    except SyntaxError as e:
-      exc_type, exc_value, exc_traceback = sys.exc_info()
-      log(LOG_CRITICAL, "Abort during processing {0} at line {1}".format(str(exc_value), str(exc_traceback.tb_lineno)))
     except Exception as e:
       exc_type, exc_value, exc_traceback = sys.exc_info()
       log(LOG_CRITICAL, "Abort during processing")
