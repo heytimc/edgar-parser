@@ -92,15 +92,17 @@ class Edgarparser(object):
 
       soup = BeautifulSoup(html, 'html5lib') # very lenient, slow parsing
       # find the start of the meeting notice
-      meetingherald = soup.find(text=true, string=re.compile("(?i)notice.of.*meeting.*of.*stockholders"))
+      meetingherald = soup.find(string=re.compile("(?i)notice.*of.*meeting.*of.*stockholders"))
       if not meetingherald:
         raise def14aError("No meeting herald line found")
       else:
-        print(meetingherald)
-        # find the meeting year within the herald text
-        meetingyear = re.findall("[0-9]{4}", meetingherald)
+        # find the meeting year (exactly four digits starting with "2") within the herald text
+        meetingyear = re.findall("2\d{3}", meetingherald)
+        if not meetingyear:
+          raise def14aError("No meeting year found")
+
+        # now we iterate over the text from the herald onwards
         item = meetingherald
-        # now we iterate from here
         for loop in range(20):
           item = item.next_element
           displayitem = self.stripHtmlTags(str(item))
