@@ -136,9 +136,17 @@ class MinervaFrame ( wx.Frame ):
     def displayLogData(self, event):
         """text_to_log = self.meeting_controller.updateView()
         self.info_log.AppendText(text_to_log)"""
-        self.meeting_controller.getMeetingData(self.company_search.GetValue(), 2015, 2019)
+        names = self.meeting_controller.getMeetingData(self.company_search.GetValue(), 2015, 2019)
+        if len(names) > 1:
+            print(names)
+            self.info_log.AppendText("**MULTIPLE COMPANIES FOUND FOR SEARCH TERM: {}**\n".format(self.company_search.GetValue()))
+            for name in names:
+                self.info_log.AppendText(name + "\n")
+        if len(names) == 0:
+            self.info_log.AppendText("** NO COMPANIES FOUND FOR SEARCH TERM: {}**\n".format(self.company_search.GetValue()))
         
-
+        if len(names) == 1:
+            self.info_log.AppendText("** MEETING DATA FOUND FOR COMPANY: {}**\n".format(names))
 if __name__ == "__main__":
     app = wx.App()
     frame = MinervaFrame(None)
