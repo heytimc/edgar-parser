@@ -47,17 +47,19 @@ LOG_CRITICAL = 50
 # current logging minimum level for the run
 LOG_CURRENT_MINIMUM = LOG_DEBUG
 
+# which BeautifulSoup parser to use
+bsoup_parser = 'html5lib'
+
 class def14aError(RuntimeError):
   pass
 
 class Edgarparser(object):
   """return structured data from html-rich EDGAR message"""
-  logger = logging.getLogger('Edgarparser')
-
-  ########################################################################################
-  def __init__(self):
-#   logging.basicConfig(format=LOGFORMAT)
-    logging.basicConfig(level=LOG_CURRENT_MINIMUM)
+  logger = logging.getLogger(__name__)
+  stdouthdlr = logging.StreamHandler(sys.stdout)
+  stdouthdlr.setFormatter(logging.Formatter(LOGFORMAT))
+  logger.addHandler(stdouthdlr)
+  logger.setLevel(LOG_CURRENT_MINIMUM)
 
 
 
@@ -68,7 +70,7 @@ class Edgarparser(object):
       if htmlTxt is None:
         return None
       else:
-        return ''.join(BeautifulSoup(htmlTxt, 'lxml').findAll(text=True))
+        return ''.join(BeautifulSoup(htmlTxt, bsoup_parser).findAll(text=True))
     except Exception as e:
       raise e.args[0]
 
@@ -84,7 +86,7 @@ class Edgarparser(object):
 
       self.logger.log(LOG_INFO, "Parsing started")
 
-      soup = BeautifulSoup(html, 'lxml') # very lenient, slow parsing
+      soup = BeautifulSoup(html, bsoup_parser)
       # find the start of the meeting notice
       meetingherald = soup.find(string=re.compile("(?i)notice.*of.*meeting.*of.*stockholders"))
       if not meetingherald:
@@ -98,22 +100,22 @@ class Edgarparser(object):
 
       # now we iterate over the text from the herald onwards
       item = meetingherald
-      lastitem = "" # .next_item seem to repeat....?!
       loop = 0
-      while item != None:
 
+      while item != None:
+        ++loop
         item = item.next_element
 
         # cleanup
         lastitem = str(item).strip().replace('\n', ' ')
 
-        # ignore empty lines
+        # ignore empty lines or HTML
         if len(lastitem) < 1 or lastitem[0] == '<':
-          ++loop
           continue
 
+        # central processing switch
+
         self.logger.log(LOG_DEBUG, "debug found {0} {1}".format(loop, lastitem[:70]))
-        ++loop
 
       result = "".join(meetingherald), meetingyear
 
