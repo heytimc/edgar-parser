@@ -37,7 +37,7 @@ try:
   # connect to database
   filename = sys.argv[1]
 
-  print('starting test run with file {0}'.format(filename))
+  print('starting test run with file {0}'.format(filename), flush=True)
   response = urllib.request.urlopen('file:' + filename)
   html = response.read()
   parser = Edgarparser.Edgarparser()

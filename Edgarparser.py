@@ -9,6 +9,8 @@
 # purpose:      return structured data from edgar message blob (html-rich edgar scraping)
 #
 #               pseudo-code:
+#                 find for meeting herald text
+#
 #
 #
 # returns:      specifically-structured array for the given message
@@ -49,34 +51,26 @@ class def14aError(RuntimeError):
   pass
 
 class Edgarparser(object):
-  'return structured data from html-rich EDGAR message'
-  logger = logging.getLogger('edgarparser')
+  """return structured data from html-rich EDGAR message"""
+  logger = logging.getLogger('Edgarparser')
 
   ########################################################################################
   def __init__(self):
-    logging.basicConfig(format=LOGFORMAT)
-    Edgarparser.logger.setLevel(LOG_CURRENT_MINIMUM)
+#   logging.basicConfig(format=LOGFORMAT)
+    logging.basicConfig(level=LOG_CURRENT_MINIMUM)
 
 
 
   ########################################################################################
-  # logger
-  def _log(self, level, message):
-    Edgarparser.logger.log(level, message)
-
-
-
-  ########################################################################################
-  # strip html tags
-  # from https://stackoverflow.com/questions/753052/strip-html-from-strings-in-python
   def stripHtmlTags(self, htmlTxt):
+    """strip html tags from https://stackoverflow.com/questions/753052/strip-html-from-strings-in-python"""
     try:
       if htmlTxt is None:
         return None
       else:
         return ''.join(BeautifulSoup(htmlTxt, 'lxml').findAll(text=True))
     except Exception as e:
-      print(e.args[0])
+      raise e.args[0]
 
 
 
@@ -88,49 +82,53 @@ class Edgarparser(object):
       meetingherald = ""
       meetingyear = ""
 
-      self._log(LOG_DEBUG, "Parsing started")
+      self.logger.log(LOG_INFO, "Parsing started")
 
       soup = BeautifulSoup(html, 'lxml') # very lenient, slow parsing
       # find the start of the meeting notice
       meetingherald = soup.find(string=re.compile("(?i)notice.*of.*meeting.*of.*stockholders"))
       if not meetingherald:
         raise def14aError("No meeting herald line found")
-      else:
-        # find the meeting year (exactly four digits starting with "2") within the herald text
-        print("Meeting herald found: {0}".format(meetingherald))
-        meetingyear = re.findall("2\d{3}", meetingherald)
-        if not meetingyear:
-          raise def14aError("No meeting year found")
 
-        # now we iterate over the text from the herald onwards
-        item = meetingherald
-        lastitem = "" # .next_item seem to repeat....?!
-        for loop in range(100):
-          item = item.next_element
+      # find the meeting year (exactly four digits starting with "2") within the herald text
+      self.logger.log(LOG_DEBUG, "Meeting herald found: {0}".format(meetingherald.strip()))
+      meetingyear = re.findall("2\d{3}", meetingherald)
+      if not meetingyear:
+        raise def14aError("No meeting year found")
 
-          # ignore repeated .next_element returns
-          if loop == 0:
-            lastitem = str(item)
-          else:
-            if lastitem == (self.stripHtmlTags(str(item))).strip():
-              continue
+      # now we iterate over the text from the herald onwards
+      item = meetingherald
+      lastitem = "" # .next_item seem to repeat....?!
+      loop = 0
+      while item != None:
 
-          lastitem = (self.stripHtmlTags(str(item))).strip()
-          print("debug found {0}".format(lastitem))
+        item = item.next_element
+
+        # cleanup
+        lastitem = str(item).strip().replace('\n', ' ')
+
+        # ignore empty lines
+        if len(lastitem) < 1 or lastitem[0] == '<':
+          ++loop
+          continue
+
+        self.logger.log(LOG_DEBUG, "debug found {0} {1}".format(loop, lastitem[:70]))
+        ++loop
+
       result = "".join(meetingherald), meetingyear
 
     except def14aError as e:
       raise Exception(e.args[0])
     except Exception as e:
       exc_type, exc_value, exc_traceback = sys.exc_info()
-      self._log(LOG_CRITICAL, "Abort during processing")
-      self._log(LOG_CRITICAL, sys.exc_info())
+      self.logger.log(LOG_CRITICAL, "Abort during processing")
+      self.logger.log(LOG_CRITICAL, sys.exc_info())
       imported_tb_info = traceback.extract_tb(exc_traceback)[-1]
       line_number = imported_tb_info[1]
-      self._log(LOG_CRITICAL, "at line number " + str(line_number))
+      self.logger.log(LOG_CRITICAL, "at line number " + str(line_number))
       sys.exit(1)
 
     finally:
-      self._log(LOG_DEBUG, "Parsing finished")
+      self.logger.log(LOG_INFO, "Parsing finished")
 
     return result
