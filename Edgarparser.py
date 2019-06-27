@@ -74,7 +74,7 @@ class Edgarparser(object):
       if htmlTxt is None:
         return None
       else:
-        return ''.join(BeautifulSoup(htmlTxt, 'html5lib').findAll(text=True))
+        return ''.join(BeautifulSoup(htmlTxt, 'lxml').findAll(text=True))
     except Exception as e:
       print(e.args[0])
 
@@ -90,23 +90,33 @@ class Edgarparser(object):
 
       self._log(LOG_DEBUG, "Parsing started")
 
-      soup = BeautifulSoup(html, 'html5lib') # very lenient, slow parsing
+      soup = BeautifulSoup(html, 'lxml') # very lenient, slow parsing
       # find the start of the meeting notice
       meetingherald = soup.find(string=re.compile("(?i)notice.*of.*meeting.*of.*stockholders"))
       if not meetingherald:
         raise def14aError("No meeting herald line found")
       else:
         # find the meeting year (exactly four digits starting with "2") within the herald text
+        print("Meeting herald found: {0}".format(meetingherald))
         meetingyear = re.findall("2\d{3}", meetingherald)
         if not meetingyear:
           raise def14aError("No meeting year found")
 
         # now we iterate over the text from the herald onwards
         item = meetingherald
-        for loop in range(20):
+        lastitem = "" # .next_item seem to repeat....?!
+        for loop in range(100):
           item = item.next_element
-          displayitem = self.stripHtmlTags(str(item))
-          print("next {0} {1}".format(loop, displayitem))
+
+          # ignore repeated .next_element returns
+          if loop == 0:
+            lastitem = str(item)
+          else:
+            if lastitem == (self.stripHtmlTags(str(item))).strip():
+              continue
+
+          lastitem = (self.stripHtmlTags(str(item))).strip()
+          print("debug found {0}".format(lastitem))
       result = "".join(meetingherald), meetingyear
 
     except def14aError as e:
