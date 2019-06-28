@@ -1,8 +1,14 @@
+# Author: Harry Pearson
+# Email: harry.pearson@student.anglia.ac.uk
+# Date: 28/06/2019
+from numpy.core.numeric import full
+
 """ Controller for the meeting """
 from Meeting import Meeting
 from DocumentRetriever import DocumentRetriever as dr
 from bs4 import BeautifulSoup
-
+import re
+import requests
 
 class MeetingController():
     
@@ -13,6 +19,7 @@ class MeetingController():
         self.document_text = None
         self._found_links = None
         self._final_com_name = set()
+        self._document_text = {}
         
     def updateView(self):
         return self.meeting.getAddress()
@@ -46,7 +53,8 @@ class MeetingController():
     
     def _getCompanyNames(self, search_term, start_date, end_date):
         blacklist = ["[text]", "[html]"]
-        doc_html = self.doc_retriever.getDocHTML(search_term, start_date, end_date)
+        link="https://www.sec.gov/cgi-bin/srch-edgar?text=DEF+14A+{0}&first={1}&last={2}".format(search_term, start_date, end_date)
+        doc_html = self.doc_retriever.getDocHTML(link)
         bs = BeautifulSoup(doc_html, 'html.parser')
         html_text = bs.prettify()
         
@@ -57,8 +65,27 @@ class MeetingController():
     
     def _getDocumentTextLink(self):
         company_name = self._final_com_name.pop()
+        document_links = []
         for link in self._found_links:
             if link.contents[0] == company_name:
                 new_link = link.get('href').replace("-index.htm", ".txt")
-                print(new_link)
+                document_links.append(new_link)
         
+        self._storeDocumentText(document_links)
+        
+    def _storeDocumentText(self, document_links):
+        base_url = "https://www.sec.gov"
+        documents = {}
+        document_number = 1
+        for text_link in document_links:
+            full_link = base_url+text_link
+            year = re.findall("-\d+-", full_link)[0].strip('-')
+            if int(year) >= 00 and int(year) <= 94:
+                document_year = "20"+year
+            elif int(year) >= 94:
+                document_year = "19"+year
+            
+            text = self.doc_retriever.getDocHTML(full_link)
+            document = {document_year: text}
+            documents[document_number] = document
+            document_number += 1

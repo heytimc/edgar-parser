@@ -52,7 +52,7 @@ def getCompanyLinks():
 # getCompanyLinks()
 
 
-
+"""
 com_name = input("Enter a company name")
 response = requests.get("https://www.sec.gov/cgi-bin/srch-edgar?text=DEF+14A+{}&first=2012&last=2019".format(com_name))
     
@@ -98,7 +98,10 @@ for link in links:
         print(new_link)
         print(str(new_link))
         print(re.findall('-\d+-', str(link)))
-        
+"""
+
+resp = requests.get("https://www.sec.gov/Archives/edgar/data/4904/000119312519072746/0001193125-19-072746.txt")
+print(type(resp.content.decode("utf-8")))
 
 
 

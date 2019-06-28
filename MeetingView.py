@@ -63,10 +63,10 @@ class MinervaFrame ( wx.Frame ):
         self.documentCreation.Wrap( -1 )
         search_sizer.Add( self.documentCreation, 0, wx.ALIGN_LEFT|wx.ALL, 5 )
         
-        self.m_spinCtrl1 = wx.SpinCtrl( search_sizer.GetStaticBox(), wx.ID_ANY, u"2000", wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 0, 2000, 10 )
+        self.m_spinCtrl1 = wx.SpinCtrl( search_sizer.GetStaticBox(), wx.ID_ANY, u"1994", wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 1994, 2999, 0)
         search_sizer.Add( self.m_spinCtrl1, 0, wx.ALIGN_LEFT|wx.ALL, 5 )
         
-        self.m_spinCtrl2 = wx.SpinCtrl( search_sizer.GetStaticBox(), wx.ID_ANY, u"2019", wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 2000, 2999, 0 )
+        self.m_spinCtrl2 = wx.SpinCtrl( search_sizer.GetStaticBox(), wx.ID_ANY, u"2019", wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 1994, 2999, 0 )
         search_sizer.Add( self.m_spinCtrl2, 0, wx.ALIGN_LEFT|wx.ALL, 5 )
         
         
@@ -136,7 +136,7 @@ class MinervaFrame ( wx.Frame ):
     def displayLogData(self, event):
         """text_to_log = self.meeting_controller.updateView()
         self.info_log.AppendText(text_to_log)"""
-        names = self.meeting_controller.getMeetingData(self.company_search.GetValue(), 2015, 2019)
+        names = self.meeting_controller.getMeetingData(self.company_search.GetValue(), self.m_spinCtrl1.GetValue(), self.m_spinCtrl2.GetValue())
         if len(names) > 1:
             print(names)
             self.info_log.AppendText("**MULTIPLE COMPANIES FOUND FOR SEARCH TERM: {}**\n".format(self.company_search.GetValue()))
