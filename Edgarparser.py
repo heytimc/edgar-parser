@@ -30,7 +30,7 @@
 import sys
 if sys.version_info[0] < 3:
   raise Exception("Please run using Python 3")
-import datetime, logging, re, traceback
+import datetime, logging, re, traceback, collections
 from time import gmtime, strftime
 from bs4 import BeautifulSoup
 
@@ -77,47 +77,118 @@ class Edgarparser(object):
 
 
   ########################################################################################
-  # parse a def14a html message
+  def __parseevent(self, html):
+    """parse the event-related elements"""
+    try:
+      # storage
+      eventdate = ""
+      resolution = collections.OrderedDict()
+      resolutionNumber = 0
+
+      # define regular expressions for specific marker phrases
+      re_location = re.compile("location|place", re.IGNORECASE)
+      re_resolutions = re.compile("resolution|items of business", re.IGNORECASE)
+      # optional bracket followed by some numbers then an optional bracket and/or and optional full stop
+      match_resolution_number = "^\(?[0-9]+\)?\.?"
+      # the resolution number plus at least one space plus some text
+      match_whole_resolution = match_resolution_number + " +.+"
+      re_oneresolution = re.compile(match_resolution_number)
+      re_recorddate = re.compile("record date", re.IGNORECASE)
+      re_signature = re.compile("by order of the board", re.IGNORECASE)
+
+      # now we iterate over the text from the herald onwards
+      loop = 0 # indicative progress counter, just for debugging really
+      inResolution = False # are we part-way through gathering a resolution's text?
+
+      # loop over the entire file from this point onwards
+      while html != None:
+        loop += 1
+        html = html.next_element
+        if html == None:
+          break
+
+        # cleanup the data we've found (convert to string, strip whitespace from the ends and
+        # replace any embedded newlines with a space)
+        lastitem = str(html).strip().replace('\n', ' ')
+
+        # central processing switch
+        if len(lastitem) < 1:
+          inResolution = False
+
+        elif lastitem[0] == '<':
+          # ignore HTML
+          continue
+          self.logger.log(LOG_DEBUG, "CANDIDATE {0} {1}".format(loop, lastitem[:70]))
+
+        elif inResolution == True:
+          # add the found text to what we have already
+          resolutionText = re.search('[a-zA-Z]+.*', lastitem)
+          if resolutionText != None:
+            resolutionText = resolutionText.group(0)
+            resolution[resolutionNumber] = resolution[resolutionNumber] + ' ' + resolutionText
+            resolution[resolutionNumber] = resolution[resolutionNumber].strip()
+            self.logger.log(LOG_DEBUG, "found more text {0}".format(resolutionText))
+
+        elif re_location.search(lastitem):
+          self.logger.log(LOG_DEBUG, "found location {0} {1}".format(loop, lastitem[:70]))
+
+        elif re_resolutions.search(lastitem):
+          self.logger.log(LOG_DEBUG, "found resolutions start {0} {1}".format(loop, lastitem[:70]))
+
+        elif re_oneresolution.search(lastitem):
+          self.logger.log(LOG_DEBUG, "found a resolution {0} {1}".format(loop, lastitem[:70]))
+          inResolution = True
+          resolutionNumber = re.search('[0-9]+', lastitem).group(0)
+          resolution[resolutionNumber] = '' # start saving the resolution
+          self.logger.log(LOG_DEBUG, "found a resolution number {0}".format(resolutionNumber))
+          resolutionText = re.search('[a-zA-Z]+.*', lastitem)
+          if resolutionText != None:
+            resolution[resolutionNumber] = resolutionText
+            self.logger.log(LOG_DEBUG, "found text {0}".format(resolutionText))
+
+        elif re_recorddate.search(lastitem):
+          self.logger.log(LOG_DEBUG, "found recorddate {0} {1}".format(loop, lastitem[:70]))
+
+        elif re_signature.search(lastitem):
+          self.logger.log(LOG_DEBUG, "found signature {0} {1}".format(loop, lastitem[:70]))
+
+        else:
+          self.logger.log(LOG_DEBUG, "NOTHING {0} {1}".format(loop, lastitem[:70]))
+    except Exception as e:
+      exc_type, exc_value, exc_traceback = sys.exc_info()
+      self.logger.log(LOG_CRITICAL, "Abort during processing")
+      self.logger.log(LOG_CRITICAL, sys.exc_info())
+      imported_tb_info = traceback.extract_tb(exc_traceback)[-1]
+      line_number = imported_tb_info[1]
+      self.logger.log(LOG_CRITICAL, "at line number " + str(line_number))
+      raise def14aError(e.args[0])
+
+
+  ########################################################################################
   def def14a(self, html):
+    """parse a def14a html message"""
     try:
       # init in case we can't find them or precursor
-      meetingherald = ""
+      meetingAnnouncement = ""
       meetingyear = ""
 
       self.logger.log(LOG_INFO, "Parsing started")
 
       soup = BeautifulSoup(html, bsoup_parser)
       # find the start of the meeting notice
-      meetingherald = soup.find(string=re.compile("(?i)notice.*of.*meeting.*of.*stockholders"))
-      if not meetingherald:
-        raise def14aError("No meeting herald line found")
+      meetingAnnouncement = soup.find(string=re.compile("\Anotice.*of.*meeting.*of.*stockholders", re.DOTALL | re.IGNORECASE))
+      if not meetingAnnouncement:
+        raise def14aError("No meeting announcement line found")
 
       # find the meeting year (exactly four digits starting with "2") within the herald text
-      self.logger.log(LOG_DEBUG, "Meeting herald found: {0}".format(meetingherald.strip()))
-      meetingyear = re.findall("2\d{3}", meetingherald)
+      self.logger.log(LOG_DEBUG, "Meeting announcement found: {0}".format(meetingAnnouncement.strip()))
+      meetingyear = re.findall("2\d{3}", meetingAnnouncement)
       if not meetingyear:
         raise def14aError("No meeting year found")
 
-      # now we iterate over the text from the herald onwards
-      item = meetingherald
-      loop = 0
+      self.__parseevent(meetingAnnouncement)
 
-      while item != None:
-        ++loop
-        item = item.next_element
-
-        # cleanup
-        lastitem = str(item).strip().replace('\n', ' ')
-
-        # ignore empty lines or HTML
-        if len(lastitem) < 1 or lastitem[0] == '<':
-          continue
-
-        # central processing switch
-
-        self.logger.log(LOG_DEBUG, "debug found {0} {1}".format(loop, lastitem[:70]))
-
-      result = "".join(meetingherald), meetingyear
+      result = "".join(meetingAnnouncement), meetingyear
 
     except def14aError as e:
       raise Exception(e.args[0])
