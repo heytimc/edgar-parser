@@ -8,11 +8,6 @@
 # change log:
 # purpose:      return structured data from edgar message blob (html-rich edgar scraping)
 #
-#               pseudo-code:
-#                 find for meeting herald text
-#
-#
-#
 # returns:      specifically-structured array for the given message
 # errors:
 # assumes:
@@ -78,15 +73,22 @@ class Edgarparser(object):
 
   ########################################################################################
   def __parseevent(self, html):
-    """parse the event-related elements"""
+    """parse the event-related elements
+    date regexp from https://www.oreilly.com/library/view/regular-expressions-cookbook/9781449327453/ch04s04.html with extensions """
     try:
-      # storage
+      # results storage
       eventdate = ""
       resolution = collections.OrderedDict()
       resolutionNumber = 0
 
       # define regular expressions for specific marker phrases
-      re_location = re.compile("location|place", re.IGNORECASE)
+      re_eventdatestart = re.compile("time and date", re.IGNORECASE)
+      # numeric date regexp
+      date_regex1 = '(?:(1[0-2]|0?[1-9])/(3[01]|[12][0-9]|0?[1-9])|(3[01]|[12][0-9]|0?[1-9])/(1[0-2]|0?[1-9]))/(?:[0-9]{2})?[0-9]{2}'
+      # e.g. 10:00 a.m., Pacific Time, on Wednesday, November 14, 2019
+      date_regex2 = '.*0?[0-9]{1}\:[0-9]{2}\s+[ap]{1}\.?[m]{1}.*[pacific|eastern|central|mountain].*[jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec].*[01]?[0-9]{1}.{1,2}2[0-9]{3}'
+      re_eventdate = re.compile('(' + date_regex1 + '|' + date_regex2 + ')', re.IGNORECASE)
+      re_address = re.compile("location|place", re.IGNORECASE)
       re_resolutions = re.compile("resolution|items of business", re.IGNORECASE)
       # optional bracket followed by some numbers then an optional bracket and/or and optional full stop
       match_resolution_number = "^\(?[0-9]+\)?\.?"
@@ -96,13 +98,17 @@ class Edgarparser(object):
       re_recorddate = re.compile("record date", re.IGNORECASE)
       re_signature = re.compile("by order of the board", re.IGNORECASE)
 
-      # now we iterate over the text from the herald onwards
+      # now we iterate over the text from the announcement onwards
       loop = 0 # indicative progress counter, just for debugging really
-      inResolution = False # are we part-way through gathering a resolution's text?
+      inResolution = False # are we part way through gathering a resolution's text?
+      inEventDate = False # are we part way through gathering an event date?
+      inAddress = False # are we part way through gathering an address
 
       # loop over the entire file from this point onwards
       while html != None:
         loop += 1
+        # get the next element (when we start this, we have already "used" the first one to
+        # find the meeting announcement start)
         html = html.next_element
         if html == None:
           break
@@ -114,8 +120,10 @@ class Edgarparser(object):
         # central processing switch
         if len(lastitem) < 1:
           inResolution = False
+          inAddress = False
+          continue
 
-        elif lastitem[0] == '<':
+        if str(html)[0] == '<':
           # ignore HTML
           continue
           self.logger.log(LOG_DEBUG, "CANDIDATE {0} {1}".format(loop, lastitem[:70]))
@@ -129,8 +137,25 @@ class Edgarparser(object):
             resolution[resolutionNumber] = resolution[resolutionNumber].strip()
             self.logger.log(LOG_DEBUG, "found more text {0}".format(resolutionText))
 
-        elif re_location.search(lastitem):
+        elif inEventDate == True:
+          self.logger.log(LOG_DEBUG, "CANDIDATE EVENT DATE {0} {1}".format(loop, lastitem[:70]))
+          eventdate = re.search(re_eventdate, lastitem)
+          if eventdate != None:
+            inEventDate = False # got it
+            self.logger.log(LOG_DEBUG, "found meeting date {0} {1}".format(loop, eventdate.group(0)))
+
+        elif inAddress == True:
+          self.logger.log(LOG_DEBUG, "found more address {0} {1}".format(loop, lastitem[:70]))
+
+        elif re_address.search(lastitem):
+          inAddress = True
           self.logger.log(LOG_DEBUG, "found location {0} {1}".format(loop, lastitem[:70]))
+
+        elif re_eventdatestart.search(lastitem):
+          eventdate = re.search(re_eventdate, lastitem)
+          if eventdate == None:
+            inEventDate = True # mark the fact that we are part-way through interpreting the event date
+          self.logger.log(LOG_DEBUG, "found meeting date {0} {1}".format(loop, lastitem[:70]))
 
         elif re_resolutions.search(lastitem):
           self.logger.log(LOG_DEBUG, "found resolutions start {0} {1}".format(loop, lastitem[:70]))
@@ -154,6 +179,7 @@ class Edgarparser(object):
 
         else:
           self.logger.log(LOG_DEBUG, "NOTHING {0} {1}".format(loop, lastitem[:70]))
+
     except Exception as e:
       exc_type, exc_value, exc_traceback = sys.exc_info()
       self.logger.log(LOG_CRITICAL, "Abort during processing")
@@ -176,7 +202,7 @@ class Edgarparser(object):
 
       soup = BeautifulSoup(html, bsoup_parser)
       # find the start of the meeting notice
-      meetingAnnouncement = soup.find(string=re.compile("\Anotice.*of.*meeting.*of.*stockholders", re.DOTALL | re.IGNORECASE))
+      meetingAnnouncement = soup.find(string=re.compile("\Anotice.*of.*meeting.*of.*(stock|share)holders", re.DOTALL | re.IGNORECASE))
       if not meetingAnnouncement:
         raise def14aError("No meeting announcement line found")
 
