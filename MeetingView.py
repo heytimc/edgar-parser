@@ -147,6 +147,7 @@ class MinervaFrame ( wx.Frame ):
         
         if len(names) == 1:
             self.info_log.AppendText("** MEETING DATA FOUND FOR COMPANY: {}**\n".format(names))
+            self.meeting_controller.getDocumentParts()
 if __name__ == "__main__":
     app = wx.App()
     frame = MinervaFrame(None)

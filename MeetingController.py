@@ -13,17 +13,24 @@ import requests
 class MeetingController():
     
     def __init__(self):
-        self.meeting = Meeting()
         self.found_com_names = set()
         self.doc_retriever = dr()
-        self.document_text = None
         self._found_links = None
         self._final_com_name = set()
-        self._document_text = {}
+        self._document_data = {}
         
     def updateView(self):
         return self.meeting.getAddress()
     
+    def getDocumentParts(self):
+        for doc_number in self._document_data:
+            for doc in self._document_data[doc_number]:
+                meeting_data = self._document_data[doc_number][doc]
+                meeting = Meeting(meeting_data)
+                meeting.getStuff()
+                # print(len(self._document_data[doc_number][doc]))
+                
+        
     def getMeetingData(self, search_term, start_date, end_date):
         self._getCompanyNames(search_term, start_date, end_date)
         
@@ -89,3 +96,5 @@ class MeetingController():
             document = {document_year: text}
             documents[document_number] = document
             document_number += 1
+        
+        self._document_data = documents
