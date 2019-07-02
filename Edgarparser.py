@@ -105,6 +105,7 @@ class Edgarparser(object):
       loop = 0 # indicative progress counter, just for debugging really
 
       whichSection = Enum('whichSection', 'NONE ADDRESS RESOLUTIONS EVENTDATE')
+      whichSection = whichSection.NONE
 
       # loop over the entire file from this point onwards
       while html != None:
@@ -138,7 +139,6 @@ class Edgarparser(object):
             resolution[resolutionNumber] = resolution[resolutionNumber] + ' ' + resolutionText
             resolution[resolutionNumber] = resolution[resolutionNumber].strip()
 
-
         elif whichSection == whichSection.EVENTDATE:
           self.logger.log(LOG_DEBUG, "CANDIDATE EVENT DATE {0} {1}".format(loop, lastitem[:70]))
           eventdate = re.search(re_eventdate, lastitem)
@@ -165,8 +165,8 @@ class Edgarparser(object):
           self.logger.log(LOG_DEBUG, "found a resolution number {0}".format(resolutionNumber))
           resolutionText = re.search('[a-zA-Z]+.*', lastitem)
           if resolutionText != None:
-            resolution[resolutionNumber] = resolutionText
-            self.logger.log(LOG_DEBUG, "found text {0}".format(resolutionText))
+            resolution[resolutionNumber] = resolutionText.group(0)
+            self.logger.log(LOG_DEBUG, "found text {0}".format(resolutionText.group(0)))
           else:
             whichSection == whichSection.RESOLUTIONS
 
@@ -206,7 +206,7 @@ class Edgarparser(object):
     try:
       # init in case we can't find them or precursor
       meetingAnnouncement = ""
-      meetingyear = ""
+      meetingYear = ""
 
       self.logger.log(LOG_INFO, "Parsing started")
 
@@ -215,16 +215,24 @@ class Edgarparser(object):
       meetingAnnouncement = soup.find(string=re.compile("\Anotice.*of.*meeting.*of.*(stock|share)holders", re.DOTALL | re.IGNORECASE))
       if not meetingAnnouncement:
         raise def14aError("No meeting announcement line found")
+      self.logger.log(LOG_DEBUG, "Meeting announcement found: {0}".format(meetingAnnouncement.strip()))
 
       # find the meeting year (exactly four digits starting with "2") within the herald text
-      self.logger.log(LOG_DEBUG, "Meeting announcement found: {0}".format(meetingAnnouncement.strip()))
-      meetingyear = re.findall("2\d{3}", meetingAnnouncement)
-      if not meetingyear:
+      searchForMeetingYear = meetingAnnouncement
+      while True:
+        if str(searchForMeetingYear)[0] != '<':
+          meetingYear = re.search("[12]{1}[0-9]{3}", searchForMeetingYear)
+          if meetingYear != None:
+            self.logger.log(LOG_DEBUG, "Meeting year found: {0}".format(meetingYear.group(0)))
+            break
+        # try the next element
+        searchForMeetingYear = searchForMeetingYear.next_element
+      if meetingYear == None:
         raise def14aError("No meeting year found")
 
       self.__parseevent(meetingAnnouncement)
 
-      result = "".join(meetingAnnouncement), meetingyear
+      result = "".join(meetingAnnouncement), meetingYear
 
     except def14aError as e:
       raise Exception(e.args[0])
