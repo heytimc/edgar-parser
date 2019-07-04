@@ -49,6 +49,12 @@ bsoup_parser = 'html5lib'
 class def14aError(RuntimeError):
   pass
 
+class def14aSection(Enum):
+  NONE = 1
+  ADDRESS = 2
+  RESOLUTIONS = 3
+  EVENTDATE = 4
+
 
 
 class Edgarparser(object):
@@ -104,8 +110,7 @@ class Edgarparser(object):
       # now we iterate over the text from the announcement onwards
       loop = 0 # indicative progress counter, just for debugging really
 
-      whichSection = Enum('whichSection', 'NONE ADDRESS RESOLUTIONS EVENTDATE')
-      whichSection = whichSection.NONE
+      whichSection = def14aSection.NONE
 
       # loop over the entire file from this point onwards
       while html != None:
@@ -121,16 +126,16 @@ class Edgarparser(object):
         lastitem = str(html).strip().replace('\n', ' ')
 
         # central processing switch
-        if len(lastitem) < 1:
-          whichSection = whichSection.NONE
-          continue
+        #if len(lastitem) < 1:
+        #  whichSection = def14aSection.NONE
+        #  continue
 
         if str(html)[0] == '<':
           # ignore HTML
           continue
           self.logger.log(LOG_DEBUG, "CANDIDATE {0} {1}".format(loop, lastitem[:70]))
 
-        elif whichSection == whichSection.RESOLUTIONS:
+        elif whichSection == def14aSection.RESOLUTIONS:
           # add the found text to what we have already
           resolutionText = re.search('[a-zA-Z]+.*', lastitem)
           if resolutionText != None:
@@ -139,27 +144,28 @@ class Edgarparser(object):
             resolution[resolutionNumber] = resolution[resolutionNumber] + ' ' + resolutionText
             resolution[resolutionNumber] = resolution[resolutionNumber].strip()
 
-        elif whichSection == whichSection.EVENTDATE:
+        elif whichSection == def14aSection.EVENTDATE:
           self.logger.log(LOG_DEBUG, "CANDIDATE EVENT DATE {0} {1}".format(loop, lastitem[:70]))
           eventdate = re.search(re_eventdate, lastitem)
           if eventdate != None:
-            inEventDate = False # got it
+            whichSection = def14aSection.NONE # got it
             self.logger.log(LOG_DEBUG, "found meeting date {0} {1}".format(loop, eventdate.group(0)))
 
         elif re_eventdatestart.search(lastitem):
-          whichSection = whichSection.NONE
+          whichSection = def14aSection.NONE
           eventdate = re.search(re_eventdate, lastitem)
+          self.logger.log(LOG_DEBUG, "found meeting date? {0} {1}".format(loop, eventdate))
           if eventdate == None:
-            whichSection = whichSection.EVENTDATE # mark the fact that we are part-way through interpreting the event date
+            whichSection = def14aSection.EVENTDATE # mark the fact that we are part-way through interpreting the event date
           self.logger.log(LOG_DEBUG, "found meeting date {0} {1}".format(loop, lastitem[:70]))
 
         elif re_resolutions.search(lastitem):
-          whichSection = whichSection.NONE
+          whichSection = def14aSection.NONE
           self.logger.log(LOG_DEBUG, "found resolutions start {0} {1}".format(loop, lastitem[:70]))
 
         elif re_oneresolution.search(lastitem):
           self.logger.log(LOG_DEBUG, "found a resolution {0} {1}".format(loop, lastitem[:70]))
-          whichSection = whichSection.RESOLUTIONS
+          whichSection = def14aSection.RESOLUTIONS
           resolutionNumber = re.search('[0-9]+', lastitem).group(0)
           resolution[resolutionNumber] = '' # start saving the resolution
           self.logger.log(LOG_DEBUG, "found a resolution number {0}".format(resolutionNumber))
@@ -168,26 +174,26 @@ class Edgarparser(object):
             resolution[resolutionNumber] = resolutionText.group(0)
             self.logger.log(LOG_DEBUG, "found text {0}".format(resolutionText.group(0)))
           else:
-            whichSection == whichSection.RESOLUTIONS
+            whichSection == def14aSection.RESOLUTIONS
 
         elif re_recorddate.search(lastitem):
-          whichSection = whichSection.NONE
+          whichSection = def14aSection.NONE
           self.logger.log(LOG_DEBUG, "found recorddate {0} {1}".format(loop, lastitem[:70]))
 
         elif re_signature.search(lastitem):
-          whichSection = whichSection.NONE
+          whichSection = def14aSection.NONE
           self.logger.log(LOG_DEBUG, "found signature {0} {1}".format(loop, lastitem[:70]))
 
         # address has low priority; if other item "start texts" are found above, let them override
-        elif whichSection == whichSection.ADDRESS:
+        elif whichSection == def14aSection.ADDRESS:
           self.logger.log(LOG_DEBUG, "found more address {0} {1}".format(loop, lastitem[:70]))
 
         elif re_address.search(lastitem):
-          whichSection = whichSection.ADDRESS
+          whichSection = def14aSection.ADDRESS
           self.logger.log(LOG_DEBUG, "found location {0} {1}".format(loop, lastitem[:70]))
 
         else:
-          whichSection = whichSection.NONE
+          whichSection = def14aSection.NONE
           self.logger.log(LOG_DEBUG, "NOTHING {0} {1}".format(loop, lastitem[:70]))
 
     except Exception as e:
