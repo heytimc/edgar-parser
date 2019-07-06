@@ -44,7 +44,7 @@ LOG_CRITICAL = 50
 LOG_CURRENT_MINIMUM = LOG_DEBUG
 
 # which BeautifulSoup parser to use
-bsoup_parser = 'html5lib'
+bsoup_parser = 'html.parser'
 
 class def14aError(RuntimeError):
   pass
@@ -56,6 +56,9 @@ class def14aSection(Enum):
   EVENTDATE = 4
 
 
+meeting_year = None
+event_date = None
+address = []
 
 class Edgarparser(object):
   """return structured data from html-rich EDGAR message"""
@@ -100,7 +103,7 @@ class Edgarparser(object):
       re_address = re.compile("location|place", re.IGNORECASE)
       re_resolutions = re.compile("resolution|items of business", re.IGNORECASE)
       # optional bracket followed by some numbers then an optional bracket and/or and optional full stop
-      match_resolution_number = "^\(?[0-9]+\)?\.?"
+      match_resolution_number = "^\(?[0-9]+\)|^[0-9]+\."
       # the resolution number plus at least one space plus some text
       match_whole_resolution = match_resolution_number + " +.+"
       re_oneresolution = re.compile(match_resolution_number)
@@ -111,7 +114,7 @@ class Edgarparser(object):
       loop = 0 # indicative progress counter, just for debugging really
 
       whichSection = def14aSection.NONE
-
+      hit_resolutions = False
       # loop over the entire file from this point onwards
       while html != None:
         loop += 1
@@ -139,18 +142,23 @@ class Edgarparser(object):
           # add the found text to what we have already
           resolutionText = re.search('[a-zA-Z]+.*', lastitem)
           if resolutionText != None:
+            hit_resolutions = True
             resolutionText = resolutionText.group(0)
             self.logger.log(LOG_DEBUG, "found more text {0}".format(resolutionText))
-            resolution[resolutionNumber] = resolution[resolutionNumber] + ' ' + resolutionText
-            resolution[resolutionNumber] = resolution[resolutionNumber].strip()
+            if resolution[resolutionNumber] == '':
+                resolution[resolutionNumber] = resolution[resolutionNumber] + ' ' + resolutionText
+                resolution[resolutionNumber] = resolution[resolutionNumber].strip()
+            whichSection = def14aSection.NONE
 
         elif whichSection == def14aSection.EVENTDATE:
-          self.logger.log(LOG_DEBUG, "CANDIDATE EVENT DATE {0} {1}".format(loop, lastitem[:70]))
-          eventdate = re.search(re_eventdate, lastitem)
-          if eventdate != None:
-            whichSection = def14aSection.NONE # got it
-            self.logger.log(LOG_DEBUG, "found meeting date {0} {1}".format(loop, eventdate.group(0)))
-
+          if lastitem[:70]:
+              self.logger.log(LOG_DEBUG, "CANDIDATE EVENT DATE {0} {1}".format(loop, lastitem[:70]))
+              eventdate = re.search(re_eventdate, lastitem)
+              if eventdate != None:
+                whichSection = def14aSection.NONE # got it
+                self.logger.log(LOG_DEBUG, "found meeting date {0} {1}".format(loop, eventdate.group(0)))
+                event_date = eventdate.group(0)
+    
         elif re_eventdatestart.search(lastitem):
           whichSection = def14aSection.NONE
           eventdate = re.search(re_eventdate, lastitem)
@@ -163,30 +171,25 @@ class Edgarparser(object):
           whichSection = def14aSection.NONE
           self.logger.log(LOG_DEBUG, "found resolutions start {0} {1}".format(loop, lastitem[:70]))
 
-        elif re_oneresolution.search(lastitem):
+        elif re_oneresolution.search(lastitem) and lastitem[:70]:
           self.logger.log(LOG_DEBUG, "found a resolution {0} {1}".format(loop, lastitem[:70]))
           whichSection = def14aSection.RESOLUTIONS
           resolutionNumber = re.search('[0-9]+', lastitem).group(0)
-          resolution[resolutionNumber] = '' # start saving the resolution
-          self.logger.log(LOG_DEBUG, "found a resolution number {0}".format(resolutionNumber))
-          resolutionText = re.search('[a-zA-Z]+.*', lastitem)
-          if resolutionText != None:
-            resolution[resolutionNumber] = resolutionText.group(0)
-            self.logger.log(LOG_DEBUG, "found text {0}".format(resolutionText.group(0)))
-          else:
-            whichSection == def14aSection.RESOLUTIONS
-
-        elif re_recorddate.search(lastitem):
-          whichSection = def14aSection.NONE
-          self.logger.log(LOG_DEBUG, "found recorddate {0} {1}".format(loop, lastitem[:70]))
-
-        elif re_signature.search(lastitem):
-          whichSection = def14aSection.NONE
-          self.logger.log(LOG_DEBUG, "found signature {0} {1}".format(loop, lastitem[:70]))
-
+          if resolutionNumber not in resolution:
+              resolution[resolutionNumber] = '' # start saving the resolution
+              self.logger.log(LOG_DEBUG, "found a resolution number {0}".format(resolutionNumber))
+              resolutionText = re.search('[a-zA-Z]+.*', lastitem)
+              if resolutionText != None:
+                resolution[resolutionNumber] = resolutionText.group(0)
+                self.logger.log(LOG_DEBUG, "found text {0}".format(resolutionText.group(0)))
+              else:
+                whichSection == def14aSection.RESOLUTIONS
+        
         # address has low priority; if other item "start texts" are found above, let them override
         elif whichSection == def14aSection.ADDRESS:
-          self.logger.log(LOG_DEBUG, "found more address {0} {1}".format(loop, lastitem[:70]))
+          if lastitem[:70]:
+            self.logger.log(LOG_DEBUG, "found more address {0} {1}".format(loop, lastitem[:70]))
+            address.append(lastitem[:70])
 
         elif re_address.search(lastitem):
           whichSection = def14aSection.ADDRESS
@@ -204,54 +207,54 @@ class Edgarparser(object):
       line_number = imported_tb_info[1]
       self.logger.log(LOG_CRITICAL, "at line number " + str(line_number))
       raise def14aError(e.args[0])
-
+    
+    print(meeting_year)
+    # print(event_date)
+    for res in resolution:
+        print(res, resolution[res])
 
   ########################################################################################
   def def14a(self, html):
     """parse a def14a html message"""
-    try:
-      # init in case we can't find them or precursor
-      meetingAnnouncement = ""
-      meetingYear = ""
+    # init in case we can't find them or precursor
+    meetingAnnouncement = ""
+    meetingYear = ""
 
-      self.logger.log(LOG_INFO, "Parsing started")
+    self.logger.log(LOG_INFO, "Parsing started")
 
-      soup = BeautifulSoup(html, bsoup_parser)
-      # find the start of the meeting notice
-      meetingAnnouncement = soup.find(string=re.compile("\Anotice.*of.*meeting.*of.*(stock|share)holders", re.DOTALL | re.IGNORECASE))
-      if not meetingAnnouncement:
+    soup = BeautifulSoup(html, bsoup_parser)
+    # find the start of the meeting notice
+    meetingAnnouncement = soup.find(string=re.compile("\Anotice.*of.*meeting.*of.*(stock|share)holders", re.DOTALL | re.IGNORECASE))
+    if not meetingAnnouncement:
         raise def14aError("No meeting announcement line found")
-      self.logger.log(LOG_DEBUG, "Meeting announcement found: {0}".format(meetingAnnouncement.strip()))
+        self.logger.log(LOG_DEBUG, "Meeting announcement found: {0}".format(meetingAnnouncement.strip()))
 
       # find the meeting year (exactly four digits starting with "2") within the herald text
-      searchForMeetingYear = meetingAnnouncement
-      while True:
+    searchForMeetingYear = meetingAnnouncement
+    while True:
         if str(searchForMeetingYear)[0] != '<':
-          meetingYear = re.search("[12]{1}[0-9]{3}", searchForMeetingYear)
-          if meetingYear != None:
-            self.logger.log(LOG_DEBUG, "Meeting year found: {0}".format(meetingYear.group(0)))
-            break
-        # try the next element
-        searchForMeetingYear = searchForMeetingYear.next_element
-      if meetingYear == None:
-        raise def14aError("No meeting year found")
+            meetingYear = re.search("[12]{1}[0-9]{3}", searchForMeetingYear)
+            if meetingYear != None:
+                self.logger.log(LOG_DEBUG, "Meeting year found: {0}".format(meetingYear.group(0)))
+                break
+            # try the next element
+            searchForMeetingYear = searchForMeetingYear.next_element
+            #if meetingYear == None:
+                #raise def14aError("No meeting year found")
 
-      self.__parseevent(meetingAnnouncement)
+            self.__parseevent(meetingAnnouncement)
 
-      result = "".join(meetingAnnouncement), meetingYear
-
-    except def14aError as e:
-      raise Exception(e.args[0])
-    except Exception as e:
-      exc_type, exc_value, exc_traceback = sys.exc_info()
-      self.logger.log(LOG_CRITICAL, "Abort during processing")
-      self.logger.log(LOG_CRITICAL, sys.exc_info())
-      imported_tb_info = traceback.extract_tb(exc_traceback)[-1]
-      line_number = imported_tb_info[1]
-      self.logger.log(LOG_CRITICAL, "at line number " + str(line_number))
-      sys.exit(1)
-
-    finally:
-      self.logger.log(LOG_INFO, "Parsing finished")
-
-    return result
+            result = "".join(meetingAnnouncement), meetingYear
+#     except def14aError as e:
+#       raise Exception(e.args[0])
+#     except Exception as e:
+#       exc_type, exc_value, exc_traceback = sys.exc_info()
+#       self.logger.log(LOG_CRITICAL, "Abort during processing")
+#       self.logger.log(LOG_CRITICAL, sys.exc_info())
+#       imported_tb_info = traceback.extract_tb(exc_traceback)[-1]
+#       line_number = imported_tb_info[1]
+#       self.logger.log(LOG_CRITICAL, "at line number " + str(line_number))
+#       sys.exit(1)
+# 
+#     finally:
+#       self.logger.log(LOG_INFO, "Parsing finished")
