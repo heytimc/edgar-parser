@@ -23,13 +23,14 @@ class MeetingController():
         return self.meeting.getAddress()
     
     def getDocumentParts(self):
+        resolutions = []
         for doc_number in self._document_data:
             for doc in self._document_data[doc_number]:
                 meeting_data = self._document_data[doc_number][doc]
                 meeting = Meeting(meeting_data)
-                meeting.getStuff()
+                resolutions.append(meeting.getStuff())
                 # print(len(self._document_data[doc_number][doc]))
-                
+        return resolutions
         
     def getMeetingData(self, search_term, start_date, end_date):
         self._getCompanyNames(search_term, start_date, end_date)
@@ -86,6 +87,7 @@ class MeetingController():
         document_number = 1
         for text_link in document_links:
             full_link = base_url+text_link
+            print(full_link)
             year = re.findall("-\d+-", full_link)[0].strip('-')
             if int(year) >= 00 and int(year) <= 94:
                 document_year = "20"+year
