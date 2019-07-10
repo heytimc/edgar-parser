@@ -111,7 +111,7 @@ class Edgarparser(object):
       re_resolutions = re.compile("resolution|items of business", re.IGNORECASE)
       # optional bracket followed by some numbers then an optional bracket
       # and/or and optional full stop
-      match_resolution_number = "^\(?[0-9]+\)|^[0-9]+\."
+      match_resolution_number = "^\(?[0-9]+\)$|^[0-9]+\.$"
       # the resolution number plus at least one space plus some text
       match_whole_resolution = match_resolution_number + " +.+"
       re_oneresolution = re.compile(match_resolution_number)
