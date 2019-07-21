@@ -11,7 +11,7 @@ import wx
 import wx.xrc
 import wx.richtext
 from MeetingController import MeetingController
-
+import sys
 ###########################################################################
 ## Class MinervaFrame
 ###########################################################################
@@ -86,9 +86,11 @@ class MinervaFrame ( wx.Frame ):
         bSizer39.Add( self.cancel_button, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 25 )
         
         self.savelog_button = wx.Button( self.m_panel32, wx.ID_ANY, u"Save Log", wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.savelog_button.Bind(wx.EVT_BUTTON, self.storeLogData)
         bSizer39.Add( self.savelog_button, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 25 )
         
         self.exit_button = wx.Button( self.m_panel32, wx.ID_ANY, u"Exit", wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.exit_button.Bind(wx.EVT_BUTTON, self.exitSystem)
         bSizer39.Add( self.exit_button, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 25 )
         
         
@@ -154,10 +156,15 @@ class MinervaFrame ( wx.Frame ):
                         self.info_log.AppendText(meeting_resolution[resolution] + "\n")
             except(Exception) as e:
                 self.info_log.AppendText("ERROR: {}\n".format(e))
-                self.meeting_controller._final_com_name = set()
+                # self.meeting_controller._final_com_name = set()
     
-    def storeLogData(self):
+    def exitSystem(self, event):
+        sys.exit()
+    
+    def storeLogData(self, event):
         """ Stores log data for the retrieved document parts """
+        self.meeting_controller._storeParsedData()
+        self.info_log.AppendText("Stored data!\n")
         
 if __name__ == "__main__":
     app = wx.App()

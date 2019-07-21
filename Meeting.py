@@ -9,17 +9,5 @@ class Meeting(object):
         self._meeting_data = meeting_data
         self.parser = Edgarparser()
         
-    def getStuff(self):
+    def getData(self):
         return self.parser.def14a(self._meeting_data)
-    
-    def getAddress(self):
-        return "Example Address\n"
-    
-    def getDate(self):
-        pass
-    
-    def getText(self):
-        pass
-    
-    def getInstructions(self):
-        pass

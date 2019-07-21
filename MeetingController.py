@@ -9,6 +9,7 @@ from DocumentRetriever import DocumentRetriever as dr
 from bs4 import BeautifulSoup
 import re
 import requests
+import DBQueryBuilder as qb
 
 class MeetingController():
     
@@ -28,7 +29,7 @@ class MeetingController():
             for doc in self._document_data[doc_number]:
                 meeting_data = self._document_data[doc_number][doc]
                 meeting = Meeting(meeting_data)
-                resolutions.append(meeting.getStuff())
+                resolutions.append(meeting.getData())
                 # print(len(self._document_data[doc_number][doc]))
         return resolutions
         
@@ -100,3 +101,6 @@ class MeetingController():
             document_number += 1
         
         self._document_data = documents
+    
+    def _storeParsedData(self):
+        query_builder = qb.QueryBuilder()
