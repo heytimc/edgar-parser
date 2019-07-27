@@ -138,7 +138,7 @@ class Edgarparser(object):
         # from the ends and
         # replace any embedded newlines with a space)
         lastitem = str(html).strip().replace('\n', ' ')
-        # need to also remove \r as it is also causing 
+        # need to also remove \r as it is also causing
         lastitem = str(lastitem).strip().replace('\r', '')
 
         # central processing switch
@@ -160,19 +160,19 @@ class Edgarparser(object):
             resolutionText = resolutionText.group(0)
             self.logger.log(LOG_DEBUG, "found more text {0}".format(resolutionText))
             if resolution[resolutionNumber] == '':
-                resolution[resolutionNumber] = resolution[resolutionNumber] + ' ' + resolutionText
-                resolution[resolutionNumber] = resolution[resolutionNumber].strip()
+              resolution[resolutionNumber] = resolution[resolutionNumber] + ' ' + resolutionText
+              resolution[resolutionNumber] = resolution[resolutionNumber].strip()
             whichSection = def14aSection.NONE
 
         elif whichSection == def14aSection.EVENTDATE:
           if lastitem[:70]:
-              self.logger.log(LOG_DEBUG, "CANDIDATE EVENT DATE {0} {1}".format(loop, lastitem[:70]))
-              eventdate = re.search(re_eventdate, lastitem)
-              if eventdate != None:
-                whichSection = def14aSection.NONE # got it
-                self.logger.log(LOG_DEBUG, "found meeting date {0} {1}".format(loop, eventdate.group(0)))
-                event_date = eventdate.group(0)
-    
+            self.logger.log(LOG_DEBUG, "CANDIDATE EVENT DATE {0} {1}".format(loop, lastitem[:70]))
+            eventdate = re.search(re_eventdate, lastitem)
+            if eventdate != None:
+              whichSection = def14aSection.NONE # got it
+              self.logger.log(LOG_DEBUG, "found meeting date {0} {1}".format(loop, eventdate.group(0)))
+              event_date = eventdate.group(0)
+
         elif re_eventdatestart.search(lastitem):
           whichSection = def14aSection.NONE
           eventdate = re.search(re_eventdate, lastitem)
@@ -190,25 +190,25 @@ class Edgarparser(object):
           whichSection = def14aSection.RESOLUTIONS
           resolutionNumber = re.search('[0-9]+', lastitem).group(0)
           if int(resolutionNumber) != int(lastResNumber)+1:
-              resolutionsFinished = True
+            resolutionsFinished = True
           if resolutionNumber not in resolution:
-              resolution[resolutionNumber] = '' # start saving the resolution
-              self.logger.log(LOG_DEBUG, "found a resolution number {0}".format(resolutionNumber))
-              resolutionText = re.search('[a-zA-Z]+.*', lastitem)
-              if resolutionText != None:
-                resolution[resolutionNumber] = resolutionText.group(0)
-                self.logger.log(LOG_DEBUG, "found text {0}".format(resolutionText.group(0)))
-              #else:
-              #  whichSection == def14aSection.RESOLUTIONS
-        
+            resolution[resolutionNumber] = '' # start saving the resolution
+            self.logger.log(LOG_DEBUG, "found a resolution number {0}".format(resolutionNumber))
+            resolutionText = re.search('[a-zA-Z]+.*', lastitem)
+            if resolutionText != None:
+              resolution[resolutionNumber] = resolutionText.group(0)
+              self.logger.log(LOG_DEBUG, "found text {0}".format(resolutionText.group(0)))
+            #else:
+            #  whichSection == def14aSection.RESOLUTIONS
+
         # address has low priority; if other item "start texts" are found
         # above, let them override
         elif whichSection == def14aSection.ADDRESS:
           if lastitem[:70]:
-              if testloop + 10 >= loop:
-                self.logger.log(LOG_DEBUG, "found more address {0} {1}".format(loop, lastitem[:70]))
-                testloop = loop
-                address.append(lastitem[:70])
+            if testloop + 10 >= loop:
+              self.logger.log(LOG_DEBUG, "found more address {0} {1}".format(loop, lastitem[:70]))
+              testloop = loop
+              address.append(lastitem[:70])
 
         elif re_address.search(lastitem) and len(address) == 0:
           whichSection = def14aSection.ADDRESS
@@ -228,12 +228,12 @@ class Edgarparser(object):
       line_number = imported_tb_info[1]
       self.logger.log(LOG_CRITICAL, "at line number " + str(line_number))
       raise def14aError(e.args[0])
-    
+
     print(meeting_year)
     print(address)
     # print(event_date)
     for res in resolution:
-        print(res, resolution[res])
+      print(res, resolution[res])
 
   ########################################################################################
   def def14a(self, html):
@@ -248,25 +248,25 @@ class Edgarparser(object):
     # find the start of the meeting notice
     meetingAnnouncement = soup.find(string=re.compile("\Anotice.*of.*meeting.*of.*(stock|share)holders", re.DOTALL | re.IGNORECASE))
     if not meetingAnnouncement:
-        raise def14aError("No meeting announcement line found")
-        self.logger.log(LOG_DEBUG, "Meeting announcement found: {0}".format(meetingAnnouncement.strip()))
+      raise def14aError("No meeting announcement line found")
+      self.logger.log(LOG_DEBUG, "Meeting announcement found: {0}".format(meetingAnnouncement.strip()))
 
       # find the meeting year (exactly four digits starting with "2") within
       # the herald text
     searchForMeetingYear = meetingAnnouncement
     while True:
-        if str(searchForMeetingYear)[0] != '<':
-            meetingYear = re.search("[12]{1}[0-9]{3}", searchForMeetingYear)
-            if meetingYear != None:
-                self.logger.log(LOG_DEBUG, "Meeting year found: {0}".format(meetingYear.group(0)))
-                
-            # try the next element
-                searchForMeetingYear = searchForMeetingYear.next_element
-            #if meetingYear == None:
-                #raise def14aError("No meeting year found")
-                self.__parseevent(meetingAnnouncement)
-                result = "".join(meetingAnnouncement), meetingYear, address
-                break
+      if str(searchForMeetingYear)[0] != '<':
+        meetingYear = re.search("[12]{1}[0-9]{3}", searchForMeetingYear)
+        if meetingYear != None:
+          self.logger.log(LOG_DEBUG, "Meeting year found: {0}".format(meetingYear.group(0)))
+
+          # try the next element
+          searchForMeetingYear = searchForMeetingYear.next_element
+          #if meetingYear == None:
+          #raise def14aError("No meeting year found")
+          self.__parseevent(meetingAnnouncement)
+          result = "".join(meetingAnnouncement), meetingYear, address
+          break
 #     except def14aError as e:
 #       raise Exception(e.args[0])
 #     except Exception as e:
@@ -277,6 +277,6 @@ class Edgarparser(object):
 #       line_number = imported_tb_info[1]
 #       self.logger.log(LOG_CRITICAL, "at line number " + str(line_number))
 #       sys.exit(1)
-# 
+#
 #     finally:
 #       self.logger.log(LOG_INFO, "Parsing finished")
